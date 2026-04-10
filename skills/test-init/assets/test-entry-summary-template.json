@@ -1,0 +1,21 @@
+{
+  "test_entry_supported": false,
+  "project_type": "spa_web_game_demo",
+  "protocol_version": "1",
+  "entry_url_examples": [],
+  "bridge_available": false,
+  "bridge_name": "window.__TEST_ENTRY__",
+  "supported_screens": [],
+  "supported_auth_modes": [],
+  "supported_presets": [],
+  "supported_features": [],
+  "recommended_entry_flow": [
+    "use URL for lightweight entry",
+    "call getCapabilities()",
+    "call login() if needed",
+    "call bootstrap() for complex state",
+    "call open()",
+    "call snapshot() for verification"
+  ],
+  "limitations": []
+}

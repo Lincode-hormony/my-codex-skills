@@ -1,0 +1,3 @@
+display_name: Test Init
+short_description: Integrate a reusable test-entry protocol into SPA-style web game demos.
+default_prompt: Integrate a reusable test-entry protocol into this project so other skills can bypass login, inject test state, and open target screens reliably.
