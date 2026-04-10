@@ -1,26 +1,26 @@
-# My Codex Skills
+# 我的 Codex Skills
 
-This repository contains my personal Codex skills.
+这是我个人用的 skill 仓库。
 
-## Structure
+## 目录结构
 
 ```text
 skills/
   export/
 ```
 
-## Current Skills
+## 当前已有的 Skill
 
 ### `export`
 
-The `export` skill exports the current Codex session into a readable Markdown record for archiving, review, or sharing.
+`export` 这个 skill 用来把当前 Codex 会话导出成一个可读的 Markdown 文件。
 
-It currently supports:
+它现在可以：
 
-- exporting the current session to a Markdown file
-- preserving the original rollout order
-- including chat messages, tool calls, tool outputs, and runtime events
-- recording source file paths and memory file locations
-- targeting a specific rollout file or session id when needed
+- 导出当前会话内容
+- 保留原始 rollout 顺序
+- 包含聊天消息、工具调用、工具输出和运行时事件
+- 记录相关源码文件路径和 memory 文件位置
+- 支持按 rollout 文件或 session id 指定导出目标
 
-The skill is located at `skills/export`.
+技能目录在 `skills/export`。
