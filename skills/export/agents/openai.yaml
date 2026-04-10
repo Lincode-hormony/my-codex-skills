@@ -1,0 +1,4 @@
+interface:
+  display_name: "Export"
+  short_description: "Export readable session records to Markdown"
+  default_prompt: "Use $export to export the current session into a readable Markdown record."
