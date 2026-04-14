@@ -1,7 +1,12 @@
 {
   "test_entry_supported": false,
-  "project_type": "spa_web_game_demo",
-  "protocol_version": "1",
+  "project_type": "spa_web_app",
+  "protocol_version": "2",
+  "launch_mode": "build-preview",
+  "commands": {
+    "build_test_entry": "",
+    "preview_test_entry": ""
+  },
   "entry_url_examples": [],
   "bridge_available": false,
   "bridge_name": "window.__TEST_ENTRY__",
@@ -10,12 +15,26 @@
   "supported_presets": [],
   "supported_features": [],
   "recommended_entry_flow": [
-    "use URL for lightweight entry",
+    "run the recorded test build command",
+    "run the recorded preview command",
+    "use URL entry for lightweight navigation",
     "call getCapabilities()",
-    "call login() if needed",
-    "call bootstrap() for complex state",
     "call open()",
-    "call snapshot() for verification"
+    "wait for the screen ready contract",
+    "call snapshot() for verification when available"
   ],
-  "limitations": []
+  "test_series_readiness": {
+    "level": "runtime-validated",
+    "benchmark": [
+      "runtime-validated: at least one screenshot-capable screen was verified in build-preview runtime",
+      "static-only: only static contract validation has completed so far"
+    ],
+    "impact": [
+      "Use runtime validation and per-screen ready contracts as the source of truth for screenshot suitability."
+    ]
+  },
+  "limitations": [],
+  "validation": {
+    "runtime_verified_in_build_preview": false
+  }
 }

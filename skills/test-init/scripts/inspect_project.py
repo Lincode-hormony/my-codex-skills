@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Inspect a frontend project for web-game test-entry integration signals.
+"""Inspect a client-rendered web project for build-first test-entry integration signals.
 
 Outputs structured JSON for the skill workflow.
 """
@@ -10,6 +10,7 @@ import json
 import re
 import sys
 from pathlib import Path
+from typing import Any
 
 SKIP_DIRS = {
     ".git",
@@ -67,6 +68,22 @@ def safe_read(path: Path) -> str:
         return ""
 
 
+def iter_source_files(root: Path):
+    scan_roots = [root / hint for hint in SCAN_ROOT_HINTS if (root / hint).exists()]
+    if not scan_roots:
+        scan_roots = [root]
+
+    for base in scan_roots:
+        for path in base.rglob("*"):
+            if any(part in SKIP_DIRS for part in path.parts):
+                continue
+            if not path.is_file():
+                continue
+            if path.suffix.lower() not in {".js", ".jsx", ".ts", ".tsx", ".mjs", ".cjs", ".json", ".md"}:
+                continue
+            yield path
+
+
 def detect_framework_signals(root: Path) -> list[str]:
     package_json = root / "package.json"
     text = safe_read(package_json)
@@ -80,6 +97,54 @@ def detect_framework_signals(root: Path) -> list[str]:
     return signals
 
 
+def load_package_json(root: Path) -> dict[str, Any]:
+    package_json = root / "package.json"
+    text = safe_read(package_json)
+    if not text:
+        return {}
+    try:
+        return json.loads(text)
+    except Exception:
+        return {}
+
+
+def inspect_build_preview_capability(root: Path) -> dict[str, object]:
+    package_payload = load_package_json(root)
+    scripts = package_payload.get("scripts", {}) if isinstance(package_payload.get("scripts"), dict) else {}
+    build_scripts = sorted(
+        name for name in scripts.keys() if "build" in name.lower()
+    )
+    preview_scripts = sorted(
+        name
+        for name in scripts.keys()
+        if "preview" in name.lower() or "serve" in name.lower()
+    )
+    has_basic_build = "build" in scripts or any(name.startswith("build:") for name in scripts)
+    has_basic_preview = "preview" in scripts or any(name.startswith("preview:") for name in scripts)
+    has_test_build = any("test" in name.lower() and "build" in name.lower() for name in scripts)
+    has_test_preview = any("test" in name.lower() and "preview" in name.lower() for name in scripts)
+
+    if has_test_build and has_test_preview:
+        level = "ready"
+        impact = ["Project already exposes test-oriented build and preview scripts."]
+    elif has_basic_build and has_basic_preview:
+        level = "adaptable"
+        impact = ["Project already exposes generic build and preview scripts that can usually be adapted."]
+    elif has_basic_build:
+        level = "partial"
+        impact = ["Project exposes a build path, but preview support is not obvious from package scripts."]
+    else:
+        level = "missing"
+        impact = ["Project does not expose an obvious build-plus-preview path in package scripts."]
+
+    return {
+        "level": level,
+        "build_scripts": build_scripts,
+        "preview_scripts": preview_scripts,
+        "impact": impact,
+    }
+
+
 def detect_entry_files(root: Path) -> list[str]:
     found = []
     for rel in ENTRY_CANDIDATES:
@@ -91,33 +156,22 @@ def detect_entry_files(root: Path) -> list[str]:
 
 def detect_test_entry_signals(root: Path) -> list[str]:
     hits: set[str] = set()
-    scan_roots = [root / hint for hint in SCAN_ROOT_HINTS if (root / hint).exists()]
-    if not scan_roots:
-        scan_roots = [root]
-
-    for base in scan_roots:
-        for path in base.rglob("*"):
-            if any(part in SKIP_DIRS for part in path.parts):
-                continue
-            if not path.is_file():
-                continue
-            if path.suffix.lower() not in {".js", ".jsx", ".ts", ".tsx", ".mjs", ".cjs", ".json", ".md"}:
-                continue
-            text = safe_read(path)
-            if not text:
-                continue
-            for name, pattern in TEST_ENTRY_PATTERNS.items():
-                if pattern.search(text):
-                    hits.add(name)
+    for path in iter_source_files(root):
+        text = safe_read(path)
+        if not text:
+            continue
+        for name, pattern in TEST_ENTRY_PATTERNS.items():
+            if pattern.search(text):
+                hits.add(name)
     return sorted(hits)
 
 
 def classify_project(framework_signals: list[str], entry_files: list[str], signal_hits: list[str]) -> tuple[str, str]:
     if "vite" in framework_signals and any(sig in framework_signals for sig in ("react", "vue")) and entry_files:
         confidence = "high" if "state-machine" in signal_hits else "medium"
-        return "spa_web_game_demo", confidence
+        return "client_rendered_web_app", confidence
     if entry_files:
-        return "frontend_spa_candidate", "medium"
+        return "client_rendered_spa_candidate", "medium"
     return "unknown", "low"
 
 
@@ -155,14 +209,17 @@ def main() -> int:
     entry_files = detect_entry_files(root)
     signal_hits = detect_test_entry_signals(root)
     project_type, confidence = classify_project(framework_signals, entry_files, signal_hits)
+    build_preview_capability = inspect_build_preview_capability(root)
 
     risks = []
     if project_type == "unknown":
-        risks.append("Could not confidently classify the project as a SPA-style web game demo.")
+        risks.append("Could not confidently classify the project as a client-rendered web app.")
     if "bridge-object" not in signal_hits:
         risks.append("No existing test-entry bridge object detected.")
     if "query-debug" not in signal_hits and "hash-debug" not in signal_hits:
         risks.append("No obvious debug URL entry signal detected.")
+    if build_preview_capability["level"] == "missing":
+        risks.append("No obvious build-plus-preview script path detected in package.json.")
 
     result = {
         "project_type": project_type,
@@ -171,6 +228,7 @@ def main() -> int:
         "entry_files": entry_files,
         "existing_test_entry_signals": signal_hits,
         "recommended_pattern": recommend_pattern(signal_hits),
+        "build_preview_capability": build_preview_capability,
         "risks": risks,
     }
     print(json.dumps(result, indent=2, ensure_ascii=True))

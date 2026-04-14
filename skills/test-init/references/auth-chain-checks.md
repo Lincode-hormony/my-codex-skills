@@ -1,6 +1,6 @@
 # Auth Chain Checks
 
-Use this file when a project has protected routes, login gating, token restore, or authenticated page APIs.
+Use this file when a project has protected routes, login gating, token restore, authenticated page APIs, or when you plan to add or modify any auth mode, bypass flow, login shortcut, or session bootstrap.
 
 ## Why this matters
 

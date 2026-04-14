@@ -1,0 +1,4 @@
+interface:
+  display_name: "Test Screenshot"
+  short_description: "Capture one Playwright screenshot from a build-first contract-backed test page."
+  default_prompt: "Use $test-screenshot to capture one screenshot from a supported build-first test page using the screen's declared ready contract."

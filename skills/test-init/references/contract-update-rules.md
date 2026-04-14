@@ -12,6 +12,7 @@ The `test-entry-summary` is the single public contract for downstream skills. Up
 - `supported_presets`
 - `supported_features`
 - `recommended_entry_flow`
+- `test_series_readiness`
 - `limitations`
 
 ## Update rules
@@ -22,6 +23,7 @@ The `test-entry-summary` is the single public contract for downstream skills. Up
 - If auth support changes, update `supported_auth_modes`.
 - If presets change, update `supported_presets`.
 - If a behavior only partially works, put that limitation in `limitations` instead of overstating support.
+- Keep `test_series_readiness` aligned with actual validation state. Use it to say whether screenshot suitability was runtime-verified, not to guess startup weight from static structure.
 
 ## Stability rules
 

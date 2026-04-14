@@ -29,14 +29,16 @@ def canonicalize_screen_label(value: str) -> str:
     return re.sub(r"[^a-z0-9\u4e00-\u9fff]+", "", value.lower())
 
 
-def extract_screen_names(supported_screens: list) -> list[str]:
-    names = []
+def normalize_supported_screens(supported_screens: list) -> tuple[list[str], dict[str, dict]]:
+    names, mapping = [], {}
     for item in supported_screens:
         if isinstance(item, str):
             names.append(item)
+            mapping[item] = {"name": item, "screenshot_ready": False}
         elif isinstance(item, dict) and isinstance(item.get("name"), str):
             names.append(item["name"])
-    return names
+            mapping[item["name"]] = item
+    return names, mapping
 
 
 def load_verified_aliases(root: Path):
@@ -96,10 +98,11 @@ def main() -> int:
     result = {
         "exists": found_path is not None, "path": str(found_path) if found_path else None,
         "valid": False, "protocol_supported": False, "missing_required_fields": [],
-        "missing_command_fields": [], "supported_screens": [], "supported_auth_modes": [],
-        "supported_presets": [], "verified_alias_file": None, "requested_screen": requested_screen,
-        "normalized_screen": requested_screen, "screen_match_kind": None, "requested_auth": requested_auth,
-        "requested_preset": requested_preset, "requested_screen_supported": None,
+        "missing_command_fields": [], "supported_screens": [], "screenshot_ready_screens": [],
+        "supported_auth_modes": [], "supported_presets": [], "verified_alias_file": None,
+        "requested_screen": requested_screen, "normalized_screen": requested_screen,
+        "screen_match_kind": None, "requested_auth": requested_auth, "requested_preset": requested_preset,
+        "requested_screen_supported": None, "requested_screen_capture_ready": None,
         "requested_auth_supported": None, "requested_preset_supported": None,
         "launch_mode": None, "protocol_version": None, "next_action": "use-test-init",
         "reason": "summary_missing",
@@ -111,10 +114,11 @@ def main() -> int:
     missing = [field for field in REQUIRED_FIELDS if field not in payload]
     commands = payload.get("commands", {}) if isinstance(payload.get("commands"), dict) else {}
     missing_command_fields = [field for field in REQUIRED_COMMAND_KEYS if not commands.get(field)]
-    screen_names = extract_screen_names(payload.get("supported_screens", []))
+    supported_screen_names, supported_screen_map = normalize_supported_screens(payload.get("supported_screens", []))
     result["missing_required_fields"] = missing
     result["missing_command_fields"] = missing_command_fields
-    result["supported_screens"] = screen_names
+    result["supported_screens"] = supported_screen_names
+    result["screenshot_ready_screens"] = [name for name, spec in supported_screen_map.items() if spec.get("screenshot_ready") is True and isinstance(spec.get("ready_strategy"), dict)]
     result["supported_auth_modes"] = payload.get("supported_auth_modes", [])
     result["supported_presets"] = payload.get("supported_presets", [])
     result["launch_mode"] = payload.get("launch_mode")
@@ -138,11 +142,14 @@ def main() -> int:
         print(json.dumps(result, ensure_ascii=False, indent=2))
         return 0
 
-    normalized_screen, screen_match_kind = normalize_requested_screen(requested_screen, screen_names, verified_aliases)
+    normalized_screen, screen_match_kind = normalize_requested_screen(requested_screen, supported_screen_names, verified_aliases)
     result["normalized_screen"] = normalized_screen
     result["screen_match_kind"] = screen_match_kind
     if requested_screen is not None:
-        result["requested_screen_supported"] = normalized_screen in screen_names
+        result["requested_screen_supported"] = normalized_screen in supported_screen_names
+        if result["requested_screen_supported"]:
+            spec = supported_screen_map.get(normalized_screen, {})
+            result["requested_screen_capture_ready"] = spec.get("screenshot_ready") is True and isinstance(spec.get("ready_strategy"), dict)
     if requested_auth is not None:
         result["requested_auth_supported"] = requested_auth in result["supported_auth_modes"]
     if requested_preset is not None:
@@ -151,6 +158,9 @@ def main() -> int:
     if requested_screen is not None and result["requested_screen_supported"] is False:
         result["next_action"] = "offer-supported-or-test-init"
         result["reason"] = "unsupported_screen"
+    elif requested_screen is not None and result["requested_screen_capture_ready"] is False:
+        result["next_action"] = "offer-supported-or-test-init"
+        result["reason"] = "screen_not_capture_ready"
     elif requested_auth is not None and result["requested_auth_supported"] is False:
         result["next_action"] = "offer-supported-or-test-init"
         result["reason"] = "unsupported_auth"

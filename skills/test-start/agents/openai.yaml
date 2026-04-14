@@ -1,4 +1,4 @@
 interface:
   display_name: "Test Start"
-  short_description: "Start and verify a project's test-entry dev server."
-  default_prompt: "Use $test-start to start this project's test-entry server and return one verified URL."
+  short_description: "Build, preview, and verify a project's build-first test environment."
+  default_prompt: "Use $test-start to build and preview this project's contract-backed test environment and return one verified URL."

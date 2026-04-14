@@ -53,6 +53,6 @@ If the fit is weak, say so early and stop before forcing the protocol into the w
 
 Use the script result as the first-pass classifier, then use this file to interpret the result:
 
-- If `project_type` is `spa_web_game_demo` and confidence is high, continue.
+- If `project_type` is `client_rendered_web_app` and confidence is high, continue.
 - If confidence is medium, inspect the app root and state-management path before editing.
 - If the script reports mixed or weak signals, do not force the protocol in. Re-check whether the app really exposes client-side state control and reusable entry points.
