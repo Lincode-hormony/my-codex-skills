@@ -1,59 +1,173 @@
-# 我的 Codex Skills
+# My Codex Skills
 
-这是我个人用的 skill 仓库。
+Personal Codex skill repository for repeatable local workflows.
 
-## 目录结构
+## Skills
 
 ```text
 skills/
   export/
   test-init/
+  test-start/
 ```
 
-## Skill 列表
-
-| Skill | 作用 | 目录 |
+| Skill | Purpose | Path |
 | --- | --- | --- |
-| `export` | 导出当前 Codex 会话为可读的 Markdown 文件 | `skills/export` |
-| `test-init` | 给 SPA 风格的网页游戏 demo 接入可复用的测试入口协议 | `skills/test-init` |
+| `export` | Export the current Codex session into a readable Markdown record | `skills/export` |
+| `test-init` | Create or extend a reusable test-entry contract for SPA-style web game demos | `skills/test-init` |
+| `test-start` | Launch a local dev server and return one contract-approved launch URL | `skills/test-start` |
 
-## Skill 说明
+## Installation
 
-### `export`
+Clone this repository and copy the desired skill folders into your local Codex skills directory.
 
-`export` 这个 skill 用来把当前 Codex 会话导出成一个可读的 Markdown 文件。
+Typical local target:
 
-它现在可以：
+```text
+C:/Users/<you>/.codex/skills/
+```
 
-- 导出当前会话内容
-- 保留原始 rollout 顺序
-- 包含聊天消息、工具调用、工具输出和运行时事件
-- 记录相关源码文件路径和 memory 文件位置
-- 支持按 rollout 文件或 session id 指定导出目标
+Example:
 
-使用方式：
+```powershell
+Copy-Item -Recurse -Force .\skills\test-start C:\Users\<you>\.codex\skills\test-start
+Copy-Item -Recurse -Force .\skills\test-init C:\Users\<you>\.codex\skills\test-init
+```
 
-- 在需要导出当前会话记录时调用这个 skill
-- 按提示提供文件名和输出目录，或者直接使用默认值
+## `test-start`
 
-技能目录在 `skills/export`。
+`test-start` consumes an existing `test-entry-summary` contract and returns one verified local URL.
 
-### `test-init`
+Use it when you want to:
 
-`test-init` 这个 skill 用来给 SPA 风格的网页游戏 demo 项目接入一个稳定的测试入口，方便后续其他 skill 直接进入指定状态进行测试。
+- start the current project's local test-entry environment
+- get one launch URL without re-reading project internals
+- open a supported screen directly
+- avoid occupied localhost ports
+- route unsupported screens back to `test-init`
 
-它现在可以：
+### What It Does
 
-- 检查项目是不是适合接入 test entry
-- 接入基于 URL 的测试入口协议
-- 提供 `window.__TEST_ENTRY__` 作为测试桥接入口
-- 支持跳过登录、注入测试状态、直接打开目标页面
-- 输出一份 test entry summary，给其他 skill 当作公共接口来用
+- validates `test-entry-summary.json`
+- plans a free local port
+- starts the dev server with platform-safe executable handling
+- verifies HTTP readiness
+- returns one contract-approved launch URL
 
-使用方式：
+### What It Does Not Do
 
-- 在网页游戏 demo 需要做测试入口初始化时调用这个 skill
-- 它会先检查项目结构，再按约定接入 test-entry 协议
-- 接入完成后，其他 skill 可以通过 URL 参数或 `window.__TEST_ENTRY__` 使用这个入口
+- modify the project test-entry base
+- invent unsupported screens
+- use UI traversal to simulate unsupported pages
+- treat a running process as success without HTTP verification
 
-技能目录在 `skills/test-init`。
+### Important Execution Rule
+
+Bundled scripts are resolved from the skill directory, but they must run with the shell working directory kept at the target project root.
+
+Correct pattern:
+
+```powershell
+python C:/Users/<you>/.codex/skills/test-start/scripts/check_summary.py
+```
+
+Run that command while your shell is already in the target project root.
+
+### Launch Behavior
+
+`test-start` now prefers the safest contract-defined path:
+
+- If the project contract defines `preferred_direct_launch`, normal launch returns that direct URL instead of forcing the raw homepage.
+- If you request a specific screen or preset and the contract supports `bypass`, `test-start` defaults to `testAuth=bypass` unless you explicitly ask for another auth mode.
+- If normal launch includes contract-defined preflight query parameters, the returned URL must be used exactly as produced.
+
+### Typical Usage
+
+Ask Codex:
+
+```text
+$test-start 给我一个基础链接
+```
+
+Possible result:
+
+```text
+http://127.0.0.1:4174/?testEntry=1&testScreen=champion-select&testAuth=bypass&testPreset=champion-select-default
+```
+
+Ask for a specific module:
+
+```text
+$test-start 打开 shop 页面
+```
+
+Expected contract-style result:
+
+```text
+http://127.0.0.1:4174/?testEntry=1&testScreen=shop&testAuth=bypass
+```
+
+### Main Scripts
+
+- `scripts/check_summary.py`
+- `scripts/plan_dev_server.py`
+- `scripts/start_dev_server.py`
+- `scripts/finalize_launch.py`
+- `scripts/record_verified_alias.py`
+
+## `test-init`
+
+`test-init` is the producer of the persistent public test-entry contract.
+
+Use it when:
+
+- the project has no valid `test-entry-summary`
+- a downstream skill reports `next_action=use-test-init`
+- a requested screen is truly unsupported and must be added permanently
+
+### What It Produces
+
+- URL-based `testEntry` protocol support
+- dev/test-only `window.__TEST_ENTRY__`
+- stable public screen names
+- updated `test-entry-summary.json`
+
+### Important Execution Rule
+
+Just like `test-start`, resolve scripts from the skill directory but keep the shell working directory at the target project root.
+
+Typical commands:
+
+```powershell
+python C:/Users/<you>/.codex/skills/test-init/scripts/check_summary.py
+python C:/Users/<you>/.codex/skills/test-init/scripts/inspect_project.py
+```
+
+### Typical Usage
+
+Ask Codex:
+
+```text
+$test-init 给这个项目补 test-entry
+```
+
+Or when extending an existing contract:
+
+```text
+$test-init 把 backpack 页面正式加进 test-entry-summary
+```
+
+## Workflow Recommendation
+
+For web-game demo projects, the intended order is:
+
+1. Use `test-init` once to create or extend the contract.
+2. Use `test-start` to start the project and return a verified launch URL.
+3. Use downstream skills such as screenshot or page-check workflows on top of the returned URL.
+
+## Notes
+
+- These skills are optimized for SPA-style web game demos.
+- `test-start` is a consumer of the contract.
+- `test-init` is the producer of the contract.
+- If the contract and implementation disagree, fix the project with `test-init` rather than inventing ad hoc URLs.
